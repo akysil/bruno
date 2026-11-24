@@ -1,5 +1,6 @@
 import type { Dispatch, SetStateAction } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { setLocalStorageValue } from 'utils/common/localStorage';
 import { usePersistenceScope } from './PersistedScopeProvider';
 
 type Options<T> = {
@@ -8,15 +9,6 @@ type Options<T> = {
 };
 
 export { ScopedPersistenceProvider as PersistedScopeProvider, clearPersistedScope } from './PersistedScopeProvider';
-
-// localStorage may be full (Chromium ~10 MB cap) or unavailable. The persisted
-// value is only a convenience, so a failed write must not throw out of a render
-// or unmount and take down the app.
-const persist = (storageKey: string, value: unknown) => {
-  try {
-    localStorage.setItem(storageKey, JSON.stringify(value));
-  } catch {}
-};
 
 export function usePersistedState<T>(options: Options<T>): [T, Dispatch<SetStateAction<T>>] {
   const scope = usePersistenceScope();
@@ -57,13 +49,13 @@ export function usePersistedState<T>(options: Options<T>): [T, Dispatch<SetState
       if (typeof value === 'function') {
         setState((prev) => {
           _next = (value as (prev: T) => T)(prev);
-          persist(storageKey, _next);
+          setLocalStorageValue(storageKey, JSON.stringify(_next));
           return _next;
         });
       } else {
         _next = value;
         setState(_next);
-        persist(storageKey, _next);
+        setLocalStorageValue(storageKey, JSON.stringify(_next));
       }
     },
     [storageKey]
